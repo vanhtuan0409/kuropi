@@ -13,6 +13,7 @@ var (
 
 type App interface {
 	Use(mdws ...Middleware)
+	Context() Context
 	Get(path string, mdws []Middleware, handler HandlerFunc)
 	Post(path string, mdws []Middleware, handler HandlerFunc)
 	Put(path string, mdws []Middleware, handler HandlerFunc)
@@ -23,21 +24,24 @@ type App interface {
 
 type app struct {
 	port       int
+	appContext Context
 	globalMdws []Middleware
 	router     *mux.Router
-	responsers map[string]Responser
 }
 
 func NewApp() App {
 	return &app{
 		globalMdws: []Middleware{},
+		appContext: NewContext(AppScope, nil),
 		router:     mux.NewRouter(),
-		responsers: map[string]Responser{},
 	}
 }
 
 func (a *app) Use(mdws ...Middleware) {
 	a.globalMdws = append(a.globalMdws, mdws...)
+}
+func (a *app) Context() Context {
+	return a.appContext
 }
 func (a *app) Get(path string, mdws []Middleware, f HandlerFunc) {
 	a.addRoute(Route{
@@ -77,7 +81,7 @@ func (a *app) Serve(port int) {
 	http.ListenAndServe(addr, a.router)
 }
 func (a *app) Responser(name string, rs Responser) {
-	a.responsers[name] = rs
+	a.appContext.SetResponser(name, rs)
 }
 func (a *app) addRoute(route Route) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -87,10 +91,13 @@ func (a *app) addRoute(route Route) {
 			}
 		}()
 
-		c := NewContext(w, r, a.responsers)
+		requestContext := a.appContext.SubContext(RequestScope)
+		requestContext.SetRequest(r)
+		requestContext.SetResponseWriter(w)
+
 		appliedMdws := a.getAppliedMiddleware(route)
 		wrappedHandler := a.getWrappedHandler(appliedMdws, route.HandlerFunc)
-		wrappedHandler(c)
+		wrappedHandler(requestContext)
 	}
 	a.router.HandleFunc(route.Path, handler).Methods(string(route.Method))
 }
