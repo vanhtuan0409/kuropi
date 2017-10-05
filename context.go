@@ -36,7 +36,7 @@ type context struct {
 	children       *context
 	request        *http.Request
 	responseWriter http.ResponseWriter
-	responsers     map[string]Responser
+	responsers     ResponserMap
 }
 
 func NewContext(scope string, parent Context) Context {
@@ -44,7 +44,7 @@ func NewContext(scope string, parent Context) Context {
 	return &context{
 		scope:      scope,
 		parent:     castedParent,
-		responsers: map[string]Responser{},
+		responsers: ResponserMap{},
 	}
 }
 
@@ -91,11 +91,11 @@ func (c *context) FastResponse(responserName string, result interface{}, err err
 }
 
 func (c *context) SubContext(scope string) Context {
-	subContext := NewContext(scope, c)
-	subContext.SetRequest(c.request)
-	subContext.SetResponseWriter(c.responseWriter)
-	subContext.SetResponsers(c.responsers)
-	c.children = subContext.(*context)
+	subContext := NewContext(scope, c).(*context)
+	subContext.request = c.request
+	subContext.responseWriter = c.responseWriter
+	subContext.responsers = c.responsers.Clone()
+	c.children = subContext
 	return subContext
 }
 

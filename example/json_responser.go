@@ -18,8 +18,8 @@ func (rs *JsonResponser) Handle(rw http.ResponseWriter, result interface{}, err 
 		}
 	} else {
 		data = map[string]interface{}{
-			"ok":    true,
-			"error": result,
+			"ok":   true,
+			"data": result,
 		}
 	}
 	jData, _ := json.Marshal(data)
