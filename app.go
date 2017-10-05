@@ -115,6 +115,8 @@ func (a *app) addRoute(route Route) {
 		appliedMdws := a.getAppliedMiddleware(route)
 		wrappedHandler := a.getWrappedHandler(appliedMdws, route.HandlerFunc)
 		wrappedHandler(requestContext)
+
+		requestContext.Destroy()
 	}
 	a.router.HandleFunc(route.Path, handler).Methods(string(route.Method))
 }

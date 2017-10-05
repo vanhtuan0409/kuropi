@@ -37,7 +37,7 @@ type Context interface {
 type context struct {
 	scope          string
 	parent         Context
-	children       Context
+	childrens      []Context
 	request        *http.Request
 	responseWriter http.ResponseWriter
 	responsers     ResponserMap
@@ -104,7 +104,7 @@ func (c *context) SubContext(scope string) Context {
 	defs := c.GetDefinitions()
 	applyDefinitionToContext(subContext, defs)
 
-	c.children = subContext
+	c.childrens = append(c.childrens, subContext)
 	return subContext
 }
 
@@ -130,8 +130,8 @@ func (c *context) FastGetInstance(name string) interface{} {
 }
 
 func (c *context) Destroy() {
-	if c.children != nil {
-		c.children.Destroy()
+	for _, child := range c.childrens {
+		child.Destroy()
 	}
 	c.container.Destroy()
 }
