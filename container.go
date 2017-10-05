@@ -47,12 +47,12 @@ func (c *container) GetDefinitions() []Definition {
 
 func (c *container) Get(ctx Context, name string) (interface{}, error) {
 	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	def, ok := c.definitions[name]
+	c.lock.Unlock()
 	if !ok {
 		return nil, errors.New("Definition is not defined")
 	}
+
 	if def.Scope != ctx.Scope() {
 		if ctx.Parent() != nil {
 			return ctx.Parent().GetInstance(name)
@@ -75,7 +75,10 @@ func (c *container) Get(ctx Context, name string) (interface{}, error) {
 		return nil, err
 	}
 
+	c.lock.Lock()
 	c.objects[name] = obj
+	c.lock.Unlock()
+
 	return obj, nil
 }
 
