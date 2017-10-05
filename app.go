@@ -18,15 +18,17 @@ type App interface {
 	Post(path string, mdws []Middleware, handler HandlerFunc)
 	Put(path string, mdws []Middleware, handler HandlerFunc)
 	Delete(path string, mdws []Middleware, handler HandlerFunc)
-	Serve(port int)
+	Serve(port int) error
 	Responser(name string, rs Responser)
+	AddDefinition(def Definition) error
 }
 
 type app struct {
-	port       int
-	appContext Context
-	globalMdws []Middleware
-	router     *mux.Router
+	port        int
+	appContext  Context
+	globalMdws  []Middleware
+	router      *mux.Router
+	definitions []Definition
 }
 
 func NewApp() App {
@@ -75,13 +77,24 @@ func (a *app) Delete(path string, mdws []Middleware, f HandlerFunc) {
 		HandlerFunc: f,
 	})
 }
-func (a *app) Serve(port int) {
+func (a *app) Serve(port int) error {
+	if err := applyDefinitionToContext(a.appContext, a.definitions); err != nil {
+		return err
+	}
+
 	a.port = port
 	addr := fmt.Sprintf(":%d", port)
-	http.ListenAndServe(addr, a.router)
+	return http.ListenAndServe(addr, a.router)
 }
 func (a *app) Responser(name string, rs Responser) {
 	a.appContext.SetResponser(name, rs)
+}
+func (a *app) AddDefinition(def Definition) error {
+	if err := validateDefinition(def); err != nil {
+		return err
+	}
+	a.definitions = append(a.definitions, def)
+	return nil
 }
 func (a *app) addRoute(route Route) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -94,6 +107,10 @@ func (a *app) addRoute(route Route) {
 		requestContext := a.appContext.SubContext(RequestScope)
 		requestContext.SetRequest(r)
 		requestContext.SetResponseWriter(w)
+		if err := applyDefinitionToContext(requestContext, a.definitions); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
 		appliedMdws := a.getAppliedMiddleware(route)
 		wrappedHandler := a.getWrappedHandler(appliedMdws, route.HandlerFunc)

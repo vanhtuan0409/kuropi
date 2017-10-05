@@ -27,24 +27,29 @@ type Context interface {
 	SetResponsers(rss map[string]Responser)
 	FastResponse(responserName string, result interface{}, err error)
 
+	AddDefinition(def Definition) error
+	GetDefinitions() []Definition
+	GetInstance(name string) (interface{}, error)
+	FastGetInstance(name string) interface{}
 	Destroy()
 }
 
 type context struct {
 	scope          string
-	parent         *context
-	children       *context
+	parent         Context
+	children       Context
 	request        *http.Request
 	responseWriter http.ResponseWriter
 	responsers     ResponserMap
+	container      Container
 }
 
 func NewContext(scope string, parent Context) Context {
-	castedParent, _ := parent.(*context)
 	return &context{
 		scope:      scope,
-		parent:     castedParent,
+		parent:     parent,
 		responsers: ResponserMap{},
+		container:  NewContainer(),
 	}
 }
 
@@ -95,6 +100,10 @@ func (c *context) SubContext(scope string) Context {
 	subContext.request = c.request
 	subContext.responseWriter = c.responseWriter
 	subContext.responsers = c.responsers.Clone()
+	subContext.container = NewContainer()
+	defs := c.GetDefinitions()
+	applyDefinitionToContext(subContext, defs)
+
 	c.children = subContext
 	return subContext
 }
@@ -103,9 +112,26 @@ func (c *context) Parent() Context {
 	return c.parent
 }
 
+func (c *context) AddDefinition(def Definition) error {
+	return c.container.AddDefinition(def)
+}
+
+func (c *context) GetDefinitions() []Definition {
+	return c.container.GetDefinitions()
+}
+
+func (c *context) GetInstance(name string) (interface{}, error) {
+	return c.container.Get(c, name)
+}
+
+func (c *context) FastGetInstance(name string) interface{} {
+	obj, _ := c.GetInstance(name)
+	return obj
+}
+
 func (c *context) Destroy() {
 	if c.children != nil {
 		c.children.Destroy()
 	}
-	// TODO: destroy data
+	c.container.Destroy()
 }

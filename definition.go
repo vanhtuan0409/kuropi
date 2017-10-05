@@ -1,13 +1,9 @@
-package di
-
-import (
-	"github.com/vanhtuan0409/kuropi"
-)
+package kuropi
 
 type Definition struct {
 	Name  string
 	Scope string
-	Build func(ctx kuropi.Context) (interface{}, error)
+	Build func(ctx Context) (interface{}, error)
 	Close func(obj interface{})
 }
 
