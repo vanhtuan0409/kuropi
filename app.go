@@ -20,6 +20,7 @@ type App interface {
 	Delete(path string, mdws []Middleware, handler HandlerFunc)
 	Serve(port int) error
 	Responser(name string, rs Responser)
+	SetInstance(name string, obj interface{}) error
 	AddDefinition(def Definition) error
 }
 
@@ -42,9 +43,11 @@ func NewApp() App {
 func (a *app) Use(mdws ...Middleware) {
 	a.globalMdws = append(a.globalMdws, mdws...)
 }
+
 func (a *app) Context() Context {
 	return a.appContext
 }
+
 func (a *app) Get(path string, mdws []Middleware, f HandlerFunc) {
 	a.addRoute(Route{
 		Method:      GET,
@@ -53,6 +56,7 @@ func (a *app) Get(path string, mdws []Middleware, f HandlerFunc) {
 		HandlerFunc: f,
 	})
 }
+
 func (a *app) Post(path string, mdws []Middleware, f HandlerFunc) {
 	a.addRoute(Route{
 		Method:      POST,
@@ -61,6 +65,7 @@ func (a *app) Post(path string, mdws []Middleware, f HandlerFunc) {
 		HandlerFunc: f,
 	})
 }
+
 func (a *app) Put(path string, mdws []Middleware, f HandlerFunc) {
 	a.addRoute(Route{
 		Method:      PUT,
@@ -69,6 +74,7 @@ func (a *app) Put(path string, mdws []Middleware, f HandlerFunc) {
 		HandlerFunc: f,
 	})
 }
+
 func (a *app) Delete(path string, mdws []Middleware, f HandlerFunc) {
 	a.addRoute(Route{
 		Method:      DELETE,
@@ -77,6 +83,7 @@ func (a *app) Delete(path string, mdws []Middleware, f HandlerFunc) {
 		HandlerFunc: f,
 	})
 }
+
 func (a *app) Serve(port int) error {
 	if err := applyDefinitionToContext(a.appContext, a.definitions); err != nil {
 		return err
@@ -89,6 +96,11 @@ func (a *app) Serve(port int) error {
 func (a *app) Responser(name string, rs Responser) {
 	a.appContext.SetResponser(name, rs)
 }
+
+func (a *app) SetInstance(name string, obj interface{}) error {
+	return a.appContext.SetInstance(name, obj)
+}
+
 func (a *app) AddDefinition(def Definition) error {
 	if err := validateDefinition(def); err != nil {
 		return err
@@ -96,6 +108,7 @@ func (a *app) AddDefinition(def Definition) error {
 	a.definitions = append(a.definitions, def)
 	return nil
 }
+
 func (a *app) addRoute(route Route) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -120,6 +133,7 @@ func (a *app) addRoute(route Route) {
 	}
 	a.router.HandleFunc(route.Path, handler).Methods(string(route.Method))
 }
+
 func (a *app) getWrappedHandler(mdws []Middleware, handler HandlerFunc) HandlerFunc {
 	h := handler
 	for i := len(mdws) - 1; i >= 0; i-- {
@@ -127,6 +141,7 @@ func (a *app) getWrappedHandler(mdws []Middleware, handler HandlerFunc) HandlerF
 	}
 	return h
 }
+
 func (a *app) getAppliedMiddleware(route Route) []Middleware {
 	return append(a.globalMdws, route.Middlewares...)
 }

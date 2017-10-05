@@ -6,6 +6,7 @@ import (
 )
 
 type Container interface {
+	SetInstance(name string, scope string, obj interface{}) error
 	AddDefinition(def Definition) error
 	GetDefinitions() []Definition
 	Get(ctx Context, name string) (interface{}, error)
@@ -24,6 +25,16 @@ func NewContainer() Container {
 		definitions: DefinitionMap{},
 		objects:     map[string]interface{}{},
 	}
+}
+
+func (c *container) SetInstance(name string, scope string, obj interface{}) error {
+	return c.AddDefinition(Definition{
+		Name:  name,
+		Scope: scope,
+		Build: func(ctx Context) (interface{}, error) {
+			return obj, nil
+		},
+	})
 }
 
 func (c *container) AddDefinition(def Definition) error {

@@ -27,6 +27,7 @@ type Context interface {
 	SetResponsers(rss map[string]Responser)
 	FastResponse(responserName string, result interface{}, err error)
 
+	SetInstance(name string, obj interface{}) error
 	AddDefinition(def Definition) error
 	GetDefinitions() []Definition
 	GetInstance(name string) (interface{}, error)
@@ -110,6 +111,10 @@ func (c *context) SubContext(scope string) Context {
 
 func (c *context) Parent() Context {
 	return c.parent
+}
+
+func (c *context) SetInstance(name string, obj interface{}) error {
+	return c.container.SetInstance(name, c.scope, obj)
 }
 
 func (c *context) AddDefinition(def Definition) error {
