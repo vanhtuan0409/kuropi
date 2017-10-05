@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/vanhtuan0409/kuropi"
 )
@@ -17,9 +16,7 @@ func ErrorHandler(ctx kuropi.Context) {
 
 func RandomHandler(ctx kuropi.Context) {
 	appNumber := ctx.FastGetInstance("appRandomNumber").(int)
-	fmt.Println("app", appNumber)
 	requestNumbder := ctx.FastGetInstance("requestRandomNumber").(int)
-	fmt.Println("request", requestNumbder)
 
 	ctx.FastResponse("json", map[string]interface{}{
 		"app":     appNumber,

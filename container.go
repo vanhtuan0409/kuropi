@@ -60,13 +60,13 @@ func (c *container) Get(ctx Context, name string) (interface{}, error) {
 		return nil, errors.New("Definition is not defined")
 	}
 
-	if stringSliceContains(c.built, name) {
-		return nil, errors.New("Definitions must not contain cycle")
-	}
-
 	obj, ok := c.objects[name]
 	if ok {
 		return obj, nil
+	}
+
+	if stringSliceContains(c.built, name) {
+		return nil, errors.New("Definitions must not contain cycle")
 	}
 
 	c.built = append(c.built, name)
