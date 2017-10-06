@@ -38,46 +38,6 @@ func NewApp() App {
 	}
 }
 
-func (a *app) Use(mdws ...Middleware) {
-	a.globalMdws = append(a.globalMdws, mdws...)
-}
-
-func (a *app) Get(path string, mdws []Middleware, f HandlerFunc) {
-	a.addRoute(Route{
-		Method:      GET,
-		Middlewares: mdws,
-		Path:        path,
-		HandlerFunc: f,
-	})
-}
-
-func (a *app) Post(path string, mdws []Middleware, f HandlerFunc) {
-	a.addRoute(Route{
-		Method:      POST,
-		Middlewares: mdws,
-		Path:        path,
-		HandlerFunc: f,
-	})
-}
-
-func (a *app) Put(path string, mdws []Middleware, f HandlerFunc) {
-	a.addRoute(Route{
-		Method:      PUT,
-		Middlewares: mdws,
-		Path:        path,
-		HandlerFunc: f,
-	})
-}
-
-func (a *app) Delete(path string, mdws []Middleware, f HandlerFunc) {
-	a.addRoute(Route{
-		Method:      DELETE,
-		Middlewares: mdws,
-		Path:        path,
-		HandlerFunc: f,
-	})
-}
-
 func (a *app) Serve(port int) error {
 	server := a.Server(port)
 	return server.ListenAndServe()
@@ -92,40 +52,4 @@ func (a *app) Server(port int) *http.Server {
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
-}
-
-func (a *app) Responser(name string, rs Responser) {
-	a.responsers[name] = rs
-}
-
-func (a *app) addRoute(route Route) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if err := recover(); err != nil {
-				panic(err)
-			}
-		}()
-
-		ctx := NewContext()
-		ctx.SetRequest(r)
-		ctx.SetResponseWriter(w)
-		ctx.SetResponsers(a.responsers)
-
-		appliedMdws := a.getAppliedMiddleware(route)
-		wrappedHandler := a.getWrappedHandler(appliedMdws, route.HandlerFunc)
-		wrappedHandler(ctx)
-	}
-	a.router.HandleFunc(route.Path, handler).Methods(string(route.Method))
-}
-
-func (a *app) getWrappedHandler(mdws []Middleware, handler HandlerFunc) HandlerFunc {
-	h := handler
-	for i := len(mdws) - 1; i >= 0; i-- {
-		h = mdws[i](h)
-	}
-	return h
-}
-
-func (a *app) getAppliedMiddleware(route Route) []Middleware {
-	return append(a.globalMdws, route.Middlewares...)
 }
