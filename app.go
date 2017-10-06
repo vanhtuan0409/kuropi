@@ -14,7 +14,6 @@ var (
 
 type App interface {
 	Use(mdws ...Middleware)
-	Context() Context
 	Get(path string, mdws []Middleware, handler HandlerFunc)
 	Post(path string, mdws []Middleware, handler HandlerFunc)
 	Put(path string, mdws []Middleware, handler HandlerFunc)
@@ -26,25 +25,21 @@ type App interface {
 
 type app struct {
 	port       int
-	appContext Context
 	globalMdws []Middleware
 	router     *mux.Router
+	responsers ResponserMap
 }
 
 func NewApp() App {
 	return &app{
 		globalMdws: []Middleware{},
-		appContext: NewContext(AppScope, nil),
+		responsers: ResponserMap{},
 		router:     mux.NewRouter(),
 	}
 }
 
 func (a *app) Use(mdws ...Middleware) {
 	a.globalMdws = append(a.globalMdws, mdws...)
-}
-
-func (a *app) Context() Context {
-	return a.appContext
 }
 
 func (a *app) Get(path string, mdws []Middleware, f HandlerFunc) {
@@ -100,25 +95,25 @@ func (a *app) Server(port int) *http.Server {
 }
 
 func (a *app) Responser(name string, rs Responser) {
-	a.appContext.SetResponser(name, rs)
+	a.responsers[name] = rs
 }
 
 func (a *app) addRoute(route Route) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		requestContext := a.appContext.SubContext(RequestScope)
-		requestContext.SetRequest(r)
-		requestContext.SetResponseWriter(w)
-
 		defer func() {
-			requestContext.Destroy()
 			if err := recover(); err != nil {
 				panic(err)
 			}
 		}()
 
+		ctx := NewContext()
+		ctx.SetRequest(r)
+		ctx.SetResponseWriter(w)
+		ctx.SetResponsers(a.responsers)
+
 		appliedMdws := a.getAppliedMiddleware(route)
 		wrappedHandler := a.getWrappedHandler(appliedMdws, route.HandlerFunc)
-		wrappedHandler(requestContext)
+		wrappedHandler(ctx)
 	}
 	a.router.HandleFunc(route.Path, handler).Methods(string(route.Method))
 }
