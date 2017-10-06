@@ -115,6 +115,10 @@ func (a *app) addRoute(route Route) {
 		requestContext := a.appContext.SubContext(RequestScope)
 		requestContext.SetRequest(r)
 		requestContext.SetResponseWriter(w)
+		if err := applyDefinitionToContext(requestContext, a.definitions); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
 		defer func() {
 			requestContext.Destroy()
@@ -122,14 +126,6 @@ func (a *app) addRoute(route Route) {
 				a.Serve(a.port)
 			}
 		}()
-
-		requestContext := a.appContext.SubContext(RequestScope)
-		requestContext.SetRequest(r)
-		requestContext.SetResponseWriter(w)
-		if err := applyDefinitionToContext(requestContext, a.definitions); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
 
 		appliedMdws := a.getAppliedMiddleware(route)
 		wrappedHandler := a.getWrappedHandler(appliedMdws, route.HandlerFunc)
