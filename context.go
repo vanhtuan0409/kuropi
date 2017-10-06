@@ -32,18 +32,17 @@ type Context interface {
 
 type context struct {
 	scope          string
-	parent         *context
-	children       *context
+	parent         Context
+	childrens      []Context
 	request        *http.Request
 	responseWriter http.ResponseWriter
 	responsers     ResponserMap
 }
 
 func NewContext(scope string, parent Context) Context {
-	castedParent, _ := parent.(*context)
 	return &context{
 		scope:      scope,
-		parent:     castedParent,
+		parent:     parent,
 		responsers: ResponserMap{},
 	}
 }
@@ -95,7 +94,7 @@ func (c *context) SubContext(scope string) Context {
 	subContext.request = c.request
 	subContext.responseWriter = c.responseWriter
 	subContext.responsers = c.responsers.Clone()
-	c.children = subContext
+	c.childrens = append(c.childrens, subContext)
 	return subContext
 }
 
@@ -104,8 +103,23 @@ func (c *context) Parent() Context {
 }
 
 func (c *context) Destroy() {
-	if c.children != nil {
-		c.children.Destroy()
+	parent := c.parent.(*context)
+	parent.removeChild(c)
+	for _, child := range c.childrens {
+		child.Destroy()
 	}
 	// TODO: destroy data
+}
+
+func (c *context) removeChild(child *context) {
+	childIndex := -1
+	for index, ctx := range c.childrens {
+		if child == ctx {
+			childIndex = index
+			break
+		}
+	}
+	if childIndex > -1 {
+		c.childrens = append(c.childrens[:childIndex], c.childrens[:childIndex+1]...)
+	}
 }
