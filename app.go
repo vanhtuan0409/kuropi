@@ -3,6 +3,7 @@ package kuropi
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -19,6 +20,7 @@ type App interface {
 	Put(path string, mdws []Middleware, handler HandlerFunc)
 	Delete(path string, mdws []Middleware, handler HandlerFunc)
 	Serve(port int) error
+	Server(port int) *http.Server
 	Responser(name string, rs Responser)
 }
 
@@ -82,9 +84,19 @@ func (a *app) Delete(path string, mdws []Middleware, f HandlerFunc) {
 }
 
 func (a *app) Serve(port int) error {
+	server := a.Server(port)
+	return server.ListenAndServe()
+}
+
+func (a *app) Server(port int) *http.Server {
 	a.port = port
 	addr := fmt.Sprintf(":%d", port)
-	return http.ListenAndServe(addr, a.router)
+	return &http.Server{
+		Addr:         addr,
+		Handler:      a.router,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+	}
 }
 
 func (a *app) Responser(name string, rs Responser) {
@@ -100,7 +112,7 @@ func (a *app) addRoute(route Route) {
 		defer func() {
 			requestContext.Destroy()
 			if err := recover(); err != nil {
-				a.Serve(a.port)
+				panic(err)
 			}
 		}()
 
