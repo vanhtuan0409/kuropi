@@ -52,11 +52,11 @@ func (a *app) addRoute(route Route) {
 			}
 		}()
 
-		ctx := NewContext()
-		ctx.SetRequest(r)
-		ctx.SetResponseWriter(w)
-		ctx.SetResponsers(a.responsers.Clone())
-
+		ctx := &context{
+			request:        r,
+			responseWriter: w,
+			responsers:     a.responsers.Clone(),
+		}
 		appliedMdws := a.getAppliedMiddleware(route)
 		wrappedHandler := a.getWrappedHandler(appliedMdws, route.HandlerFunc)
 		wrappedHandler(ctx)
