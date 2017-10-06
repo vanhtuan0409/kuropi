@@ -93,6 +93,7 @@ func (a *app) Serve(port int) error {
 	addr := fmt.Sprintf(":%d", port)
 	return http.ListenAndServe(addr, a.router)
 }
+
 func (a *app) Responser(name string, rs Responser) {
 	a.appContext.SetResponser(name, rs)
 }
@@ -111,7 +112,12 @@ func (a *app) AddDefinition(def Definition) error {
 
 func (a *app) addRoute(route Route) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
+		requestContext := a.appContext.SubContext(RequestScope)
+		requestContext.SetRequest(r)
+		requestContext.SetResponseWriter(w)
+
 		defer func() {
+			requestContext.Destroy()
 			if err := recover(); err != nil {
 				a.Serve(a.port)
 			}

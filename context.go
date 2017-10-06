@@ -135,8 +135,23 @@ func (c *context) FastGetInstance(name string) interface{} {
 }
 
 func (c *context) Destroy() {
+	parent := c.parent.(*context)
+	parent.removeChild(c)
 	for _, child := range c.childrens {
 		child.Destroy()
 	}
 	c.container.Destroy()
+}
+
+func (c *context) removeChild(child *context) {
+	childIndex := -1
+	for index, ctx := range c.childrens {
+		if child == ctx {
+			childIndex = index
+			break
+		}
+	}
+	if childIndex > -1 {
+		c.childrens = append(c.childrens[:childIndex], c.childrens[:childIndex+1]...)
+	}
 }
