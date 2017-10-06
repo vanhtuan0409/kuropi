@@ -7,8 +7,14 @@ import (
 type Context interface {
 	Request() *http.Request
 	ResponseWriter() http.ResponseWriter
+
 	Responser(name string) Responser
 	FastResponse(responserName string, result interface{}, err error)
+
+	Query(name string) string
+	Var(name string) string
+	ParseForm(dst interface{}) error
+	ParseJson(dst interface{}) error
 }
 
 type context struct {
